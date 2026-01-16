@@ -1,0 +1,2147 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="MAO-N D5 (2VVM) 蛋白质三维结构交互式可视化工具">
+    <meta name="keywords" content="MAO-N, 2VVM, 蛋白质结构, 3D可视化, 单胺氧化酶">
+    <title>MAO-N D5 (2VVM) 蛋白质结构可视化</title>
+    <!-- 引入 Lucide 图标库 -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <script src="https://3Dmol.csb.pitt.edu/build/3Dmol-min.js"></script>
+    <style>
+        :root {
+            --bg: #f5f5f7;
+            --bg-card: #ffffff;
+            --bg-input: #ffffff;
+            --border: #e8e8ed;
+            --border-hover: #d1d1d6;
+            --text: #1d1d1f;
+            --text-muted: #86868b;
+            --text-label: #6e6e73;
+            --viewer-bg: #fafafa;
+            --accent: #0071e3;
+            --accent-light: rgba(0, 113, 227, 0.1);
+            --success: #34c759;
+            --warning: #ff9500;
+            --shadow-sm: 0 1px 3px rgba(0,0,0,0.04);
+            --shadow-md: 0 4px 12px rgba(0,0,0,0.08);
+            --shadow-lg: 0 8px 24px rgba(0,0,0,0.12);
+            --radius-sm: 6px;
+            --radius-md: 10px;
+            --radius-lg: 14px;
+        }
+
+        [data-theme="dark"] {
+            --bg: #000000;
+            --bg-card: #1c1c1e;
+            --bg-input: #2c2c2e;
+            --border: #38383a;
+            --border-hover: #48484a;
+            --text: #f5f5f7;
+            --text-muted: #8e8e93;
+            --text-label: #98989d;
+            --viewer-bg: #1c1c1e;
+            --accent: #0a84ff;
+            --accent-light: rgba(10, 132, 255, 0.15);
+            --shadow-sm: 0 1px 3px rgba(0,0,0,0.3);
+            --shadow-md: 0 4px 12px rgba(0,0,0,0.4);
+            --shadow-lg: 0 8px 24px rgba(0,0,0,0.5);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI', Roboto, sans-serif;
+            background: var(--bg);
+            min-height: 100vh;
+            padding: 20px;
+            color: var(--text);
+            transition: background 0.3s ease, color 0.3s ease;
+            line-height: 1.5;
+        }
+
+        .container {
+            max-width: 1440px;
+            margin: 0 auto;
+        }
+
+        /* Header 样式优化 */
+        header {
+            margin-bottom: 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px 16px;
+            background: var(--bg-card);
+            border-radius: var(--radius-lg);
+            border: 1px solid var(--border);
+            box-shadow: var(--shadow-sm);
+        }
+
+        .header-left {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+        }
+
+        .logo-icon {
+            width: 42px;
+            height: 42px;
+            background: linear-gradient(135deg, var(--accent), #5856d6);
+            border-radius: var(--radius-md);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: 700;
+            font-size: 0.9em;
+            letter-spacing: -0.5px;
+        }
+
+        .header-text h1 {
+            font-size: 1.25em;
+            font-weight: 600;
+            color: var(--text);
+            letter-spacing: -0.02em;
+        }
+
+        .header-text .subtitle {
+            font-size: 0.8em;
+            color: var(--text-muted);
+            margin-top: 2px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .badge {
+            display: inline-flex;
+            align-items: center;
+            padding: 2px 8px;
+            background: var(--accent-light);
+            color: var(--accent);
+            border-radius: 20px;
+            font-size: 0.85em;
+            font-weight: 500;
+        }
+
+        /* 工具栏样式 */
+        .top-toolbar {
+            display: flex;
+            gap: 6px;
+            align-items: center;
+        }
+
+        .toolbar-divider {
+            width: 1px;
+            height: 24px;
+            background: var(--border);
+            margin: 0 4px;
+        }
+
+        .tool-btn {
+            width: 38px;
+            height: 38px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: var(--radius-md);
+            border: 1px solid var(--border);
+            background: var(--bg-input);
+            color: var(--text-muted);
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .tool-btn:hover {
+            border-color: var(--border-hover);
+            color: var(--text);
+            background: var(--bg-card);
+            transform: translateY(-1px);
+            box-shadow: var(--shadow-sm);
+        }
+
+        .tool-btn.active {
+            background: var(--accent);
+            color: white;
+            border-color: var(--accent);
+        }
+
+        .tool-btn svg {
+            width: 18px;
+            height: 18px;
+        }
+
+        .theme-toggle {
+            width: 38px;
+            height: 38px;
+            padding: 0;
+            border: 1px solid var(--border);
+            border-radius: var(--radius-md);
+            background: var(--bg-input);
+            color: var(--text-muted);
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+        }
+
+        .theme-toggle:hover {
+            border-color: var(--border-hover);
+            color: var(--text);
+        }
+
+        .theme-toggle svg {
+            width: 18px;
+            height: 18px;
+        }
+
+        /* 右侧面板折叠 */
+        .info-panel.collapsed {
+            width: 0;
+            padding: 0;
+            border: none;
+            overflow: hidden;
+            display: none;
+        }
+
+        .main-content.expanded {
+            grid-template-columns: 1fr;
+        }
+
+        /* 截图菜单 */
+        .screenshot-menu {
+            position: absolute;
+            top: 48px;
+            right: 0;
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-md);
+            padding: 8px;
+            box-shadow: var(--shadow-lg);
+            display: none;
+            z-index: 30;
+            min-width: 160px;
+        }
+
+        .screenshot-menu.show { display: block; }
+
+        .screenshot-menu .menu-title {
+            font-size: 0.75em;
+            color: var(--text-muted);
+            padding: 4px 8px;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .screenshot-menu button {
+            width: 100%;
+            margin: 4px 0;
+            text-align: left;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        /* 主内容区域 */
+        .main-content {
+            display: grid;
+            grid-template-columns: 1fr 300px;
+            gap: 16px;
+            align-items: start;
+        }
+
+        .viewer-container {
+            background: var(--bg-card);
+            border-radius: var(--radius-lg);
+            border: 1px solid var(--border);
+            overflow: hidden;
+            box-shadow: var(--shadow-md);
+            position: relative;
+        }
+
+        /* Viewer工具条覆盖层 */
+        .viewer-overlay {
+            position: absolute;
+            bottom: 12px;
+            left: 12px;
+            display: flex;
+            gap: 6px;
+            z-index: 10;
+        }
+
+        .viewer-overlay .overlay-btn {
+            padding: 6px 12px;
+            background: rgba(0,0,0,0.6);
+            backdrop-filter: blur(10px);
+            border: none;
+            border-radius: 20px;
+            color: white;
+            font-size: 0.75em;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            transition: background 0.2s;
+        }
+
+        .viewer-overlay .overlay-btn:hover {
+            background: rgba(0,0,0,0.8);
+        }
+
+        .viewer-overlay .overlay-btn svg {
+            width: 14px;
+            height: 14px;
+        }
+
+        #viewer {
+            width: 100%;
+            height: 680px;
+            position: relative;
+        }
+
+        /* 信息面板 */
+        .info-panel {
+            background: var(--bg-card);
+            border-radius: var(--radius-lg);
+            border: 1px solid var(--border);
+            padding: 16px;
+            box-shadow: var(--shadow-sm);
+            max-height: calc(100vh - 140px);
+            overflow-y: auto;
+            position: sticky;
+            top: 20px;
+        }
+
+        .info-panel::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        .info-panel::-webkit-scrollbar-thumb {
+            background: var(--border);
+            border-radius: 3px;
+        }
+
+        .info-section {
+            margin-bottom: 20px;
+            padding-bottom: 16px;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .info-section:last-child {
+            margin-bottom: 0;
+            padding-bottom: 0;
+            border-bottom: none;
+        }
+
+        .info-section h3 {
+            color: var(--text-label);
+            margin-bottom: 12px;
+            font-size: 0.7em;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .info-section h3 svg {
+            width: 14px;
+            height: 14px;
+            opacity: 0.7;
+        }
+
+        .info-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 8px 0;
+            font-size: 0.82em;
+        }
+
+        .info-item strong {
+            color: var(--text-muted);
+            font-weight: 450;
+        }
+
+        .info-item span {
+            color: var(--text);
+            font-weight: 500;
+        }
+
+        .info-item em {
+            font-style: italic;
+            opacity: 0.9;
+        }
+
+        .controls {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .control-group {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        .control-group label {
+            font-size: 0.7em;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            font-weight: 500;
+        }
+
+        /* 预设按钮网格 */
+        .preset-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 6px;
+        }
+
+        button {
+            width: 100%;
+            padding: 10px 12px;
+            border: 1px solid var(--border);
+            border-radius: var(--radius-sm);
+            background: var(--bg-input);
+            color: var(--text);
+            cursor: pointer;
+            font-size: 0.78em;
+            font-weight: 450;
+            transition: all 0.2s ease;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+        }
+
+        button:hover {
+            border-color: var(--border-hover);
+            background: var(--bg-card);
+            transform: translateY(-1px);
+            box-shadow: var(--shadow-sm);
+        }
+
+        button:active {
+            transform: translateY(0);
+        }
+
+        button.primary {
+            background: var(--accent);
+            color: white;
+            border-color: var(--accent);
+        }
+
+        button.primary:hover {
+            filter: brightness(1.1);
+        }
+
+        button svg {
+            width: 14px;
+            height: 14px;
+        }
+
+        select {
+            width: 100%;
+            padding: 10px 12px;
+            border: 1px solid var(--border);
+            border-radius: var(--radius-sm);
+            font-size: 0.82em;
+            background: var(--bg-input);
+            color: var(--text);
+            cursor: pointer;
+            appearance: none;
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%2386868b' stroke-width='2'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
+            background-repeat: no-repeat;
+            background-position: right 10px center;
+            background-size: 14px;
+            transition: all 0.2s ease;
+        }
+
+        select:hover {
+            border-color: var(--border-hover);
+        }
+
+        select:focus {
+            outline: none;
+            border-color: var(--accent);
+            box-shadow: 0 0 0 3px var(--accent-light);
+        }
+
+        .loading {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 0.85em;
+            color: var(--text-muted);
+        }
+
+        /* 响应式设计 */
+        @media (max-width: 1200px) {
+            .main-content {
+                grid-template-columns: 1fr 280px;
+            }
+        }
+
+        @media (max-width: 1024px) {
+            .main-content {
+                grid-template-columns: 1fr;
+            }
+            
+            .info-panel {
+                position: static;
+                max-height: none;
+            }
+            
+            #viewer {
+                height: 500px;
+            }
+        }
+
+        @media (max-width: 768px) {
+            body {
+                padding: 12px;
+            }
+            
+            header {
+                flex-direction: column;
+                gap: 12px;
+                align-items: stretch;
+            }
+            
+            .top-toolbar {
+                justify-content: center;
+                flex-wrap: wrap;
+            }
+            
+            .toolbar-divider {
+                display: none;
+            }
+            
+            #viewer {
+                height: 400px;
+            }
+            
+            .preset-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        /* 状态提示 */
+        .status {
+            padding: 10px 14px;
+            border-radius: var(--radius-sm);
+            font-size: 0.8em;
+            text-align: center;
+            margin-top: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+
+        .status:empty {
+            display: none;
+        }
+
+        .status.success {
+            background: rgba(52, 199, 89, 0.1);
+            color: var(--success);
+            border: 1px solid rgba(52, 199, 89, 0.2);
+        }
+
+        .status.error {
+            background: rgba(255, 59, 48, 0.1);
+            color: #ff3b30;
+            border: 1px solid rgba(255, 59, 48, 0.2);
+        }
+
+        /* 提示文字 */
+        .tips {
+            font-size: 0.75em;
+            color: var(--text-muted);
+            line-height: 2;
+        }
+
+        .tips span {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        kbd {
+            background: var(--bg-input);
+            border: 1px solid var(--border);
+            box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+            border-radius: 3px;
+            padding: 2px 6px;
+            font-size: 0.9em;
+            font-family: inherit;
+        }
+
+        /* 文献引用样式 */
+        .citation {
+            font-size: 0.72em;
+            color: var(--text-muted);
+            line-height: 1.6;
+            padding: 10px;
+            background: var(--bg-input);
+            border-radius: 6px;
+            border-left: 3px solid var(--border-hover);
+        }
+
+        .citation a {
+            color: #3b82f6;
+            text-decoration: none;
+        }
+
+        .citation a:hover {
+            text-decoration: underline;
+        }
+
+        /* 外部链接按钮 */
+        .external-links {
+            display: flex;
+            gap: 6px;
+            flex-wrap: wrap;
+        }
+
+        .external-links a {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            padding: 6px 10px;
+            font-size: 0.75em;
+            border: 1px solid var(--border);
+            border-radius: 4px;
+            color: var(--text);
+            text-decoration: none;
+            background: var(--bg-input);
+            transition: all 0.15s;
+        }
+
+        .external-links a:hover {
+            border-color: var(--border-hover);
+            background: var(--bg-card);
+        }
+
+        /* 加载动画 */
+        .loading {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 0.85em;
+            color: var(--text-muted);
+            text-align: center;
+        }
+
+        .loading::after {
+            content: '';
+            display: block;
+            width: 24px;
+            height: 24px;
+            margin: 12px auto 0;
+            border: 2px solid var(--border);
+            border-top-color: var(--text-muted);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        /* ========== 新功能样式 ========== */
+
+        /* 全屏模式 */
+        .fullscreen-mode {
+            position: fixed !important;
+            top: 0 !important;
+            left: 0 !important;
+            width: 100vw !important;
+            height: 100vh !important;
+            z-index: 9999 !important;
+            border-radius: 0 !important;
+            margin: 0 !important;
+        }
+
+        .fullscreen-mode #viewer {
+            height: 100vh !important;
+        }
+
+        .fullscreen-mode .sequence-bar {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            border-radius: 0;
+        }
+
+        .fullscreen-exit-btn {
+            position: fixed;
+            top: 16px;
+            right: 16px;
+            z-index: 10000;
+            padding: 10px 16px;
+            background: rgba(0,0,0,0.7);
+            backdrop-filter: blur(10px);
+            border: none;
+            border-radius: 20px;
+            color: white;
+            font-size: 0.8em;
+            cursor: pointer;
+            display: none;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .fullscreen-mode .fullscreen-exit-btn {
+            display: flex;
+        }
+
+        /* 搜索框 */
+        .search-container {
+            position: relative;
+        }
+
+        .search-input-wrapper {
+            display: flex;
+            gap: 6px;
+        }
+
+        .search-input {
+            flex: 1;
+            padding: 10px 12px;
+            border: 1px solid var(--border);
+            border-radius: var(--radius-sm);
+            font-size: 0.82em;
+            background: var(--bg-input);
+            color: var(--text);
+            transition: all 0.2s;
+        }
+
+        .search-input:focus {
+            outline: none;
+            border-color: var(--accent);
+            box-shadow: 0 0 0 3px var(--accent-light);
+        }
+
+        .search-input::placeholder {
+            color: var(--text-muted);
+        }
+
+        .search-btn {
+            width: 38px !important;
+            padding: 0 !important;
+            flex-shrink: 0;
+        }
+
+        .search-suggestions {
+            position: absolute;
+            top: 100%;
+            left: 0;
+            right: 0;
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-sm);
+            margin-top: 4px;
+            max-height: 200px;
+            overflow-y: auto;
+            z-index: 100;
+            display: none;
+            box-shadow: var(--shadow-md);
+        }
+
+        .search-suggestions.show {
+            display: block;
+        }
+
+        .search-suggestion-item {
+            padding: 8px 12px;
+            font-size: 0.8em;
+            cursor: pointer;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .search-suggestion-item:last-child {
+            border-bottom: none;
+        }
+
+        .search-suggestion-item:hover {
+            background: var(--accent-light);
+        }
+
+        .search-suggestion-item .res-name {
+            font-weight: 500;
+        }
+
+        .search-suggestion-item .res-info {
+            color: var(--text-muted);
+            font-size: 0.9em;
+        }
+
+        /* 序列查看器 */
+        .sequence-bar {
+            background: var(--bg-card);
+            border-top: 1px solid var(--border);
+            padding: 8px 12px;
+            border-radius: 0 0 var(--radius-lg) var(--radius-lg);
+        }
+
+        .sequence-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 8px;
+        }
+
+        .sequence-header h4 {
+            font-size: 0.7em;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: var(--text-muted);
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .sequence-header h4 svg {
+            width: 12px;
+            height: 12px;
+        }
+
+        .sequence-controls {
+            display: flex;
+            gap: 4px;
+        }
+
+        .sequence-controls button {
+            width: 28px !important;
+            height: 28px;
+            padding: 0 !important;
+            font-size: 0.75em;
+        }
+
+        .sequence-wrapper {
+            position: relative;
+            overflow: hidden;
+        }
+
+        .sequence-scroll {
+            display: flex;
+            overflow-x: auto;
+            gap: 1px;
+            padding: 4px 0;
+            scroll-behavior: smooth;
+        }
+
+        .sequence-scroll::-webkit-scrollbar {
+            height: 4px;
+        }
+
+        .sequence-scroll::-webkit-scrollbar-thumb {
+            background: var(--border);
+            border-radius: 2px;
+        }
+
+        .seq-residue {
+            min-width: 20px;
+            height: 24px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.65em;
+            font-family: 'SF Mono', 'Consolas', monospace;
+            font-weight: 500;
+            cursor: pointer;
+            border-radius: 2px;
+            transition: all 0.15s;
+            position: relative;
+        }
+
+        .seq-residue:hover {
+            transform: scale(1.2);
+            z-index: 5;
+        }
+
+        .seq-residue.selected {
+            outline: 2px solid var(--accent);
+            outline-offset: 1px;
+        }
+
+        .seq-residue.mutation {
+            background: #ff6b35 !important;
+            color: white !important;
+        }
+
+        .seq-residue.helix {
+            background: #ff6b9d;
+            color: white;
+        }
+
+        .seq-residue.sheet {
+            background: #ffd93d;
+            color: #333;
+        }
+
+        .seq-residue.coil {
+            background: var(--bg-input);
+            color: var(--text);
+        }
+
+        .seq-residue.ligand {
+            background: #6bcb77;
+            color: white;
+        }
+
+        .sequence-legend {
+            display: flex;
+            gap: 12px;
+            margin-top: 6px;
+            font-size: 0.65em;
+            color: var(--text-muted);
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .legend-color {
+            width: 10px;
+            height: 10px;
+            border-radius: 2px;
+        }
+
+        /* 序列位置指示器 */
+        .sequence-position {
+            font-size: 0.7em;
+            color: var(--text-muted);
+            padding: 2px 8px;
+            background: var(--bg-input);
+            border-radius: 10px;
+        }
+
+        /* 触摸手势提示 */
+        .touch-hint {
+            position: absolute;
+            bottom: 60px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(0,0,0,0.75);
+            color: white;
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-size: 0.75em;
+            pointer-events: none;
+            opacity: 0;
+            transition: opacity 0.3s;
+            z-index: 20;
+        }
+
+        .touch-hint.show {
+            opacity: 1;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <div class="header-left">
+                <div class="logo-icon">PDB</div>
+                <div class="header-text">
+                    <h1>MAO-N D5 结构可视化</h1>
+                    <p class="subtitle">
+                        <span class="badge">2VVM</span>
+                        黑曲霉单胺氧化酶 D5 突变体 · 1.85 Å
+                    </p>
+                </div>
+            </div>
+
+            <div class="top-toolbar">
+                <button class="tool-btn" title="重置视角" onclick="resetView()" id="resetBtn">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>
+                </button>
+                <button class="tool-btn" title="自动旋转" onclick="toggleSpin()" id="spinBtn">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-9-9c2.52 0 4.93 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/></svg>
+                </button>
+                <button class="tool-btn" title="显示/隐藏表面" onclick="showSurface()" id="surfaceBtn">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20"/><path d="M2 12h20"/></svg>
+                </button>
+                <div class="toolbar-divider"></div>
+                <button id="selectBtn" class="tool-btn" title="选择残基" onclick="toggleSelectMode()">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m3 3 7.07 16.97 2.51-7.39 7.39-2.51L3 3z"/><path d="m13 13 6 6"/></svg>
+                </button>
+                <button id="measureBtn" class="tool-btn" title="测量距离" onclick="toggleMeasureMode()">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.3 15.3a2.4 2.4 0 0 1 0 3.4l-2.6 2.6a2.4 2.4 0 0 1-3.4 0L2.7 8.7a2.41 2.41 0 0 1 0-3.4l2.6-2.6a2.41 2.41 0 0 1 3.4 0Z"/><path d="m14.5 12.5 2-2"/><path d="m11.5 9.5 2-2"/><path d="m8.5 6.5 2-2"/><path d="m17.5 15.5 2-2"/></svg>
+                </button>
+                <div class="toolbar-divider"></div>
+                <div style="position:relative;">
+                    <button id="screenshotBtn" class="tool-btn" title="导出截图" onclick="toggleScreenshotMenu()">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z"/><circle cx="12" cy="13" r="3"/></svg>
+                    </button>
+                    <div id="screenshotMenu" class="screenshot-menu" aria-hidden="true">
+                        <div class="menu-title">导出图像</div>
+                        <button onclick="exportWithOptions(1,false)">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect width="18" height="18" x="3" y="3" rx="2"/></svg>
+                            PNG 1x
+                        </button>
+                        <button onclick="exportWithOptions(2,false)">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect width="18" height="18" x="3" y="3" rx="2"/></svg>
+                            PNG 2x (推荐)
+                        </button>
+                        <button onclick="exportWithOptions(4,false)">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect width="18" height="18" x="3" y="3" rx="2"/></svg>
+                            PNG 4x 高清
+                        </button>
+                        <button onclick="exportWithOptions(2,true)">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect width="18" height="18" x="3" y="3" rx="2" stroke-dasharray="4"/></svg>
+                            PNG 透明背景
+                        </button>
+                    </div>
+                </div>
+                <button class="theme-toggle" onclick="toggleTheme()" title="切换主题" id="themeBtn">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="sun-icon"><circle cx="12" cy="12" r="4"/><path d="M12 2v2"/><path d="M12 20v2"/><path d="m4.93 4.93 1.41 1.41"/><path d="m17.66 17.66 1.41 1.41"/><path d="M2 12h2"/><path d="M20 12h2"/><path d="m6.34 17.66-1.41 1.41"/><path d="m19.07 4.93-1.41 1.41"/></svg>
+                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="moon-icon" style="display:none"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/></svg>
+                </button>
+                <button class="tool-btn" title="折叠面板" onclick="toggleInfoPanel()" id="panelBtn">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="3" rx="2"/><path d="M15 3v18"/></svg>
+                </button>
+                <button class="tool-btn" title="全屏模式" onclick="toggleFullscreen()" id="fullscreenBtn">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3H5a2 2 0 0 0-2 2v3"/><path d="M21 8V5a2 2 0 0 0-2-2h-3"/><path d="M3 16v3a2 2 0 0 0 2 2h3"/><path d="M16 21h3a2 2 0 0 0 2-2v-3"/></svg>
+                </button>
+            </div>
+        </header>
+
+        <div class="main-content">
+            <div class="viewer-container" id="viewerContainer">
+                <!-- 全屏退出按钮 -->
+                <button class="fullscreen-exit-btn" onclick="toggleFullscreen()">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 3v3a2 2 0 0 1-2 2H3"/><path d="M21 8h-3a2 2 0 0 1-2-2V3"/><path d="M3 16h3a2 2 0 0 1 2 2v3"/><path d="M16 21v-3a2 2 0 0 1 2-2h3"/></svg>
+                    退出全屏
+                </button>
+                
+                <!-- 触摸手势提示 -->
+                <div class="touch-hint" id="touchHint">双指缩放 · 单指旋转</div>
+                
+                <div id="viewer">
+                    <div class="loading">正在从 RCSB PDB 加载结构数据...</div>
+                </div>
+                
+                <!-- 序列查看器 -->
+                <div class="sequence-bar" id="sequenceBar">
+                    <div class="sequence-header">
+                        <h4>
+                            <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 6h4"/><path d="M2 10h4"/><path d="M2 14h4"/><path d="M2 18h4"/><path d="M21 6h-9a2 2 0 0 0-2 2v10c0 1.1.9 2 2 2h9"/><path d="M12 10h3"/><path d="M12 14h3"/><path d="M12 18h3"/></svg>
+                            序列 · 链 A
+                        </h4>
+                        <div class="sequence-controls">
+                            <span class="sequence-position" id="seqPosition">1-100</span>
+                            <button onclick="scrollSequence(-100)" title="向左">◀</button>
+                            <button onclick="scrollSequence(100)" title="向右">▶</button>
+                        </div>
+                    </div>
+                    <div class="sequence-wrapper">
+                        <div class="sequence-scroll" id="sequenceScroll">
+                            <!-- 序列将通过JS动态生成 -->
+                        </div>
+                    </div>
+                    <div class="sequence-legend">
+                        <div class="legend-item"><div class="legend-color" style="background:#ff6b9d"></div>α-螺旋</div>
+                        <div class="legend-item"><div class="legend-color" style="background:#ffd93d"></div>β-折叠</div>
+                        <div class="legend-item"><div class="legend-color" style="background:#ff6b35"></div>突变位点</div>
+                        <div class="legend-item"><div class="legend-color" style="background:#6bcb77"></div>配体</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="info-panel">
+                <!-- 搜索框 -->
+                <div class="info-section">
+                    <h3>
+                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+                        残基搜索
+                    </h3>
+                    <div class="search-container">
+                        <div class="search-input-wrapper">
+                            <input type="text" class="search-input" id="residueSearch" placeholder="输入残基编号或名称 (如 246, FAD)" autocomplete="off">
+                            <button class="search-btn" onclick="searchResidue()">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+                            </button>
+                        </div>
+                        <div class="search-suggestions" id="searchSuggestions"></div>
+                    </div>
+                </div>
+
+                <div class="info-section">
+                    <h3>
+                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2a10 10 0 1 0 10 10 4 4 0 0 1-5-5 4 4 0 0 1-5-5"/><path d="M8.5 8.5v.01"/><path d="M16 15.5v.01"/><path d="M12 12v.01"/><path d="M11 17v.01"/><path d="M7 14v.01"/></svg>
+                        蛋白质信息
+                    </h3>
+                    <div class="info-item"><strong>PDB ID</strong><span>2VVM</span></div>
+                    <div class="info-item"><strong>蛋白名称</strong><span>MAO-N D5</span></div>
+                    <div class="info-item"><strong>来源</strong><span><em>Aspergillus niger</em></span></div>
+                    <div class="info-item"><strong>EC 编号</strong><span>1.4.3.4</span></div>
+                    <div class="info-item"><strong>分辨率</strong><span>1.85 Å</span></div>
+                    <div class="info-item"><strong>链信息</strong><span id="chainInfo">加载中...</span></div>
+                    <div class="info-item"><strong>辅因子</strong><span>FAD (非共价)</span></div>
+                </div>
+
+                <div class="info-section">
+                    <h3>
+                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m16 6 4 14"/><path d="M12 6v14"/><path d="M8 8v12"/><path d="M4 4v16"/></svg>
+                        D5 突变位点
+                    </h3>
+                    <div class="info-item"><strong>I246M</strong><span>底物结合灵活性</span></div>
+                    <div class="info-item"><strong>N336S</strong><span>减少Trp430位阻</span></div>
+                    <div class="info-item"><strong>M348K</strong><span>底物特异性扩展</span></div>
+                    <div class="info-item"><strong>T384N</strong><span>活性位点微环境</span></div>
+                    <div class="info-item"><strong>D385S</strong><span>活性位点微环境</span></div>
+                </div>
+
+                <div class="info-section">
+                    <h3>
+                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/></svg>
+                        结构预设
+                    </h3>
+                    <div class="controls preset-grid">
+                        <button onclick="applyPreset('overview')">FAD 辅因子</button>
+                        <button onclick="applyPreset('mutations')">突变位点</button>
+                        <button onclick="applyPreset('channel')">结合口袋</button>
+                        <button onclick="applyPreset('aromatic')">芳香笼</button>
+                    </div>
+                </div>
+
+                <div class="info-section">
+                    <h3>
+                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></svg>
+                        显示设置
+                    </h3>
+                    <div class="controls">
+                        <div class="control-group">
+                            <label>渲染样式</label>
+                            <select id="styleSelect">
+                                <option value="cartoon">🎨 卡通 (Cartoon)</option>
+                                <option value="stick">🔗 球棍 (Stick)</option>
+                                <option value="sphere">⚪ 球体 (Sphere)</option>
+                                <option value="line">📏 线框 (Line)</option>
+                            </select>
+                        </div>
+
+                        <div class="control-group">
+                            <label>配色方案</label>
+                            <select id="colorSelect">
+                                <option value="spectrum">🌈 光谱色 (Spectrum)</option>
+                                <option value="chain">🔗 按链着色 (Chain)</option>
+                                <option value="ss">🧬 二级结构 (SS)</option>
+                                <option value="atom">⚛️ CPK 原子色</option>
+                            </select>
+                        </div>
+
+                        <div class="preset-grid">
+                            <button onclick="resetView()">重置视图</button>
+                            <button onclick="showSurface()">切换表面</button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="info-section">
+                    <h3>
+                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><path d="M12 17h.01"/></svg>
+                        交互操作
+                    </h3>
+                    <div class="tips">
+                        <span><kbd>左键拖动</kbd> 旋转视角</span>
+                        <span><kbd>滚轮</kbd> 缩放</span>
+                        <span><kbd>右键拖动</kbd> 平移</span>
+                        <span><kbd>双击</kbd> 聚焦原子</span>
+                    </div>
+                </div>
+
+                <div class="info-section" id="selectionPanel" style="display:none;">
+                    <h3>
+                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m3 3 7.07 16.97 2.51-7.39 7.39-2.51L3 3z"/></svg>
+                        选择信息
+                    </h3>
+                    <div class="info-item"><strong>当前选择</strong><span id="selectedList">（无）</span></div>
+                    <button onclick="clearSelections()">清除选择</button>
+                </div>
+
+                <div class="info-section">
+                    <h3>
+                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
+                        外部资源
+                    </h3>
+                    <div class="external-links">
+                        <a href="https://www.rcsb.org/structure/2VVM" target="_blank" rel="noopener">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" x2="21" y1="14" y2="3"/></svg>
+                            RCSB PDB
+                        </a>
+                        <a href="https://www.uniprot.org/uniprotkb/P46882" target="_blank" rel="noopener">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" x2="21" y1="14" y2="3"/></svg>
+                            UniProt
+                        </a>
+                        <a href="https://doi.org/10.1016/j.jmb.2008.09.090" target="_blank" rel="noopener">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1 0-5H20"/></svg>
+                            J Mol Biol
+                        </a>
+                    </div>
+                </div>
+
+                <div class="info-section">
+                    <h3>
+                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1 0-5H20"/></svg>
+                        参考文献
+                    </h3>
+                    <div class="citation">
+                        Atkin KE, <em>et al.</em> (2008) The Structure of Monoamine Oxidase from <em>Aspergillus niger</em> Provides a Molecular Context for Improvements in Activity Obtained by Directed Evolution. <em>J Mol Biol</em> <strong>384</strong>:1218-1231. 
+                        <br><a href="https://pubmed.ncbi.nlm.nih.gov/18951902/" target="_blank" rel="noopener">PubMed: 18951902</a>
+                    </div>
+                </div>
+
+                <div id="status"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let viewer;
+        let isSpinning = false;
+        let currentModel;
+        let selectMode = false;
+        let measureMode = false;
+        let selectedAtoms = []; // {atom, labelId}
+
+        // 初始化3Dmol查看器
+        function initViewer() {
+            let element = document.getElementById('viewer');
+            if (!element) {
+                console.error('Viewer element not found');
+                return;
+            }
+            
+            // 检查3Dmol是否加载
+            if (typeof $3Dmol === 'undefined') {
+                document.querySelector('.loading').textContent = '3Dmol库加载失败，请刷新页面';
+                console.error('3Dmol not loaded');
+                return;
+            }
+            
+            let bgColor = isDark ? '#111' : '#fafafa';
+            let config = { backgroundColor: bgColor };
+            
+            try {
+                viewer = $3Dmol.createViewer(element, config);
+                
+                // 设置加载超时
+                let loadTimeout = setTimeout(function() {
+                    document.querySelector('.loading').textContent = '加载超时，请检查网络后刷新';
+                }, 30000);
+                
+                // 从PDB数据库加载2VVM结构
+                $3Dmol.download("pdb:2VVM", viewer, {}, function(model) {
+                    clearTimeout(loadTimeout);
+                    
+                    if (!model) {
+                        document.querySelector('.loading').textContent = '模型加载失败';
+                        return;
+                    }
+                    
+                    viewer.setStyle({}, {cartoon: {color: 'spectrum'}});
+                    viewer.zoomTo();
+                    viewer.render();
+                    showStatus('已加载 2VVM', 'success');
+                    document.querySelector('.loading').style.display = 'none';
+                    
+                    // 获取链信息
+                    try {
+                        const atoms = model.selectedAtoms({});
+                        const chains = [...new Set(atoms.map(a => a.chain))].filter(c => c);
+                        document.getElementById('chainInfo').textContent = chains.join(', ') || 'A, B';
+                        
+                        // 生成序列查看器
+                        generateSequenceViewer(atoms);
+                        
+                        // 构建搜索索引
+                        buildSearchIndex(atoms);
+                    } catch(e) {
+                        document.getElementById('chainInfo').textContent = 'A, B';
+                    }
+                    
+                    currentModel = model;
+                });
+            } catch(e) {
+                console.error('Viewer init error:', e);
+                document.querySelector('.loading').textContent = '初始化失败: ' + e.message;
+            }
+        }
+
+        // 绑定事件监听器
+        function bindEventListeners() {
+            // 更改显示样式
+            document.getElementById('styleSelect').addEventListener('change', function(e) {
+                let style = e.target.value;
+                let colorScheme = document.getElementById('colorSelect').value;
+                applyStyleAndColor(style, colorScheme);
+            });
+
+            // 更改颜色方案
+            document.getElementById('colorSelect').addEventListener('change', function(e) {
+                let style = document.getElementById('styleSelect').value;
+                let colorScheme = e.target.value;
+                applyStyleAndColor(style, colorScheme);
+            });
+        }
+
+        // 应用样式和颜色
+        function applyStyleAndColor(style, colorScheme) {
+            viewer.setStyle({}, {});
+            
+            let styleConfig = {};
+            
+            // 为不同颜色方案设置合适的配置
+            switch(colorScheme) {
+                case 'spectrum':
+                    styleConfig[style] = { color: 'spectrum' };
+                    break;
+                case 'chain':
+                    // 链着色：使用预设颜色方案
+                    styleConfig[style] = { colorscheme: 'chainHetatm' };
+                    break;
+                case 'ss':
+                    // 二级结构：螺旋紫红色，折叠黄色，loop白色
+                    styleConfig[style] = { colorscheme: 'ssByElem' };
+                    break;
+                case 'atom':
+                    // 原子类型：CPK配色
+                    styleConfig[style] = { colorscheme: 'default' };
+                    break;
+                default:
+                    styleConfig[style] = { color: colorScheme };
+            }
+            
+            viewer.setStyle({}, styleConfig);
+            viewer.render();
+        }
+
+        // 重置视图
+        function resetView() {
+            viewer.zoomTo();
+            viewer.render();
+        }
+
+        // 切换旋转动画
+        function toggleSpin() {
+            if (isSpinning) {
+                viewer.spin(false);
+                isSpinning = false;
+            } else {
+                viewer.spin(true);
+                isSpinning = true;
+            }
+        }
+
+        // 显示/隐藏表面
+        let surfaceVisible = false;
+        function showSurface() {
+            if (!surfaceVisible) {
+                viewer.addSurface($3Dmol.SurfaceType.VDW, {
+                    opacity: 0.6,
+                    colorscheme: {
+                        prop: 'b',
+                        gradient: 'roygb'
+                    }
+                });
+                surfaceVisible = true;
+            } else {
+                viewer.removeAllSurfaces();
+                surfaceVisible = false;
+            }
+            viewer.render();
+        }
+
+        // 显示状态消息
+        function showStatus(message, type) {
+            let statusEl = document.getElementById('status');
+            statusEl.textContent = message;
+            statusEl.className = 'status ' + type;
+            
+            setTimeout(() => {
+                statusEl.textContent = '';
+                statusEl.className = 'status';
+            }, 3000);
+        }
+
+        // 主题切换
+        let isDark = false;
+        function toggleTheme() {
+            isDark = !isDark;
+            document.body.setAttribute('data-theme', isDark ? 'dark' : 'light');
+            
+            // 切换图标显示
+            const themeBtn = document.getElementById('themeBtn');
+            if (themeBtn) {
+                const sunIcon = themeBtn.querySelector('.sun-icon');
+                const moonIcon = themeBtn.querySelector('.moon-icon');
+                if (sunIcon && moonIcon) {
+                    sunIcon.style.display = isDark ? 'none' : 'block';
+                    moonIcon.style.display = isDark ? 'block' : 'none';
+                }
+            }
+            
+            try { localStorage.setItem('pv-theme', isDark ? 'dark' : 'light'); } catch(e){}
+            
+            // 更新viewer背景色
+            if (viewer) {
+                viewer.setBackgroundColor(isDark ? '#1c1c1e' : '#fafafa');
+                viewer.render();
+            }
+        }
+
+        // 预设视图
+        function applyPreset(preset) {
+            if (!viewer) return;
+            viewer.removeAllSurfaces();
+            viewer.removeAllLabels();
+            viewer.removeAllShapes();
+            surfaceVisible = false;
+            
+            // D5突变位点 (根据RCSB PDB文献: I246M, N336S, M348K, T384N, D385S)
+            const mutationResidues = [246, 336, 348, 384, 385];
+            const mutationLabels = {
+                246: 'I246M',
+                336: 'N336S', 
+                348: 'M348K',
+                384: 'T384N',
+                385: 'D385S'
+            };
+            // 芳香笼残基
+            const aromaticCage = [430, 466]; // Trp430, Phe466
+
+            switch(preset) {
+                case 'overview':
+                    // 整体展示，FAD辅因子高亮
+                    viewer.setStyle({}, {cartoon: {color: 'spectrum'}});
+                    viewer.setStyle({resn: 'FAD'}, {stick: {colorscheme: 'yellowCarbon', radius: 0.2}});
+                    viewer.setStyle({resn: 'PRO'}, {stick: {colorscheme: 'cyanCarbon', radius: 0.15}});
+                    viewer.addLabel("FAD", {
+                        backgroundColor: 'rgba(255,200,0,0.8)',
+                        fontColor: 'black',
+                        fontSize: 12
+                    }, {resn: 'FAD'});
+                    viewer.zoomTo();
+                    showStatus('FAD辅因子 (黄) + L-脯氨酸配体 (青)', 'success');
+                    break;
+
+                case 'mutations':
+                    // D5突变位点展示
+                    viewer.setStyle({}, {cartoon: {color: 'white', opacity: 0.35}});
+                    viewer.setStyle({resi: mutationResidues}, {stick: {colorscheme: 'orangeCarbon', radius: 0.22}});
+                    viewer.setStyle({resn: 'FAD'}, {stick: {colorscheme: 'yellowCarbon', radius: 0.18}});
+                    
+                    // 添加突变标签
+                    mutationResidues.forEach(resi => {
+                        viewer.addLabel(mutationLabels[resi], {
+                            backgroundColor: 'rgba(255,100,50,0.85)',
+                            fontColor: 'white',
+                            fontSize: 11,
+                            showBackground: true
+                        }, {resi: resi, atom: 'CA'});
+                    });
+
+                    viewer.zoomTo({resi: mutationResidues});
+                    showStatus('D5变体5个突变位点 (橙色)', 'success');
+                    break;
+
+                case 'channel':
+                    // FAD结合口袋 (8Å范围)
+                    viewer.setStyle({}, {cartoon: {color: 'white', opacity: 0.15}});
+                    viewer.setStyle({within: {distance: 8, sel: {resn: 'FAD'}}}, {
+                        stick: {colorscheme: 'spectrum', radius: 0.12}
+                    });
+                    viewer.setStyle({resn: 'FAD'}, {stick: {colorscheme: 'yellowCarbon', radius: 0.2}});
+                    viewer.setStyle({resn: 'PRO'}, {sphere: {colorscheme: 'cyanCarbon', scale: 0.25}});
+                    
+                    viewer.addSurface($3Dmol.SurfaceType.VDW, {
+                        opacity: 0.3,
+                        color: 'white'
+                    }, {within: {distance: 8, sel: {resn: 'FAD'}}});
+                    surfaceVisible = true;
+                    
+                    viewer.zoomTo({resn: 'FAD'});
+                    showStatus('FAD结合口袋 (8Å范围), PRO配体位置', 'success');
+                    break;
+
+                case 'aromatic':
+                    // 芳香笼: Trp430 和 Phe466
+                    viewer.setStyle({}, {cartoon: {color: 'white', opacity: 0.25}});
+                    viewer.setStyle({resi: aromaticCage}, {stick: {colorscheme: 'purpleCarbon', radius: 0.22}});
+                    viewer.setStyle({resn: 'FAD'}, {stick: {colorscheme: 'yellowCarbon', radius: 0.18}});
+                    viewer.setStyle({resn: 'PRO'}, {stick: {colorscheme: 'cyanCarbon', radius: 0.18}});
+                    
+                    viewer.addLabel("Trp430", {
+                        backgroundColor: 'rgba(128,0,128,0.85)',
+                        fontColor: 'white',
+                        fontSize: 11
+                    }, {resi: 430, atom: 'CA'});
+                    viewer.addLabel("Phe466", {
+                        backgroundColor: 'rgba(128,0,128,0.85)',
+                        fontColor: 'white',
+                        fontSize: 11
+                    }, {resi: 466, atom: 'CA'});
+                    
+                    viewer.zoomTo({resi: aromaticCage.concat([1])}, {resn: 'FAD'});
+                    showStatus('芳香笼: Trp430 + Phe466 (紫色)', 'success');
+                    break;
+            }
+            viewer.render();
+        }
+
+        // 截图菜单开关
+        function toggleScreenshotMenu() {
+            const menu = document.getElementById('screenshotMenu');
+            if (!menu) return;
+            const showing = menu.classList.toggle('show');
+            menu.setAttribute('aria-hidden', !showing);
+            if (showing) {
+                // 绑定一次性点击以外区域关闭
+                setTimeout(() => {
+                    function onDocClick(e) {
+                        if (!menu.contains(e.target) && e.target.id !== 'screenshotBtn') {
+                            menu.classList.remove('show');
+                            menu.setAttribute('aria-hidden', 'true');
+                            document.removeEventListener('click', onDocClick);
+                        }
+                    }
+                    document.addEventListener('click', onDocClick);
+                }, 0);
+            }
+        }
+
+        // 真正的高分辨率导出：通过临时调整查看器容器尺寸并重渲染
+        async function exportWithOptions(scale = 1, transparent = false) {
+            const menu = document.getElementById('screenshotMenu');
+            if (menu) { menu.classList.remove('show'); menu.setAttribute('aria-hidden','true'); }
+
+            const viewerEl = document.getElementById('viewer');
+            if (!viewerEl || !viewer) return alert('未找到查看器');
+
+            const container = document.querySelector('.viewer-container');
+            // 保存原始尺寸
+            const origWidth = viewerEl.style.width || '';
+            const origHeight = viewerEl.style.height || '';
+            const origViewerBg = null;
+
+            // Determine target pixel size
+            const rect = viewerEl.getBoundingClientRect();
+            const targetW = Math.max(200, Math.round(rect.width * scale));
+            const targetH = Math.max(200, Math.round(rect.height * scale));
+
+            try {
+                // 临时设置尺寸（以像素）并触发 resize + render
+                viewerEl.style.width = targetW + 'px';
+                viewerEl.style.height = targetH + 'px';
+                if (transparent) {
+                    try { viewer.setBackgroundColor('rgba(0,0,0,0)'); } catch(e){}
+                } else {
+                    try { viewer.setBackgroundColor(getComputedStyle(document.body).getPropertyValue('--viewer-bg').trim() || '#fafafa'); } catch(e){}
+                }
+                // some viewer implementations provide resize(); call if exists
+                if (typeof viewer.resize === 'function') viewer.resize();
+                viewer.render();
+
+                // 等待渲染稳定
+                await new Promise(r => setTimeout(r, 250));
+
+                const canvas = viewerEl.querySelector('canvas');
+                if (!canvas) throw new Error('未找到渲染画布');
+
+                const dataURL = canvas.toDataURL('image/png');
+                downloadURI(dataURL, '2VVM_screenshot@' + scale + 'x.png');
+            } catch (e) {
+                console.error(e);
+                alert('导出失败：' + e.message);
+            } finally {
+                // 恢复尺寸
+                viewerEl.style.width = origWidth;
+                viewerEl.style.height = origHeight;
+                if (typeof viewer.resize === 'function') viewer.resize();
+                viewer.render();
+            }
+        }
+
+        // 折叠/展开右侧信息面板
+        function toggleInfoPanel() {
+            const panel = document.querySelector('.info-panel');
+            const main = document.querySelector('.main-content');
+            if (!panel) return;
+            const btn = document.querySelector('.tool-btn[title="折叠/展开信息面板"]');
+            if (panel.classList.contains('collapsed')) {
+                panel.classList.remove('collapsed');
+                main.classList.remove('expanded');
+                if (btn) btn.textContent = '▸';
+            } else {
+                panel.classList.add('collapsed');
+                main.classList.add('expanded');
+                if (btn) btn.textContent = '◂';
+            }
+        }
+
+        // 选择/测距模式控制
+        function toggleSelectMode() {
+            selectMode = !selectMode;
+            if (selectMode) {
+                measureMode = false;
+                document.getElementById('selectionPanel').style.display = '';
+                document.getElementById('selectBtn').classList.add('active');
+                enableClickable(true);
+            } else {
+                document.getElementById('selectionPanel').style.display = 'none';
+                document.getElementById('selectBtn').classList.remove('active');
+                enableClickable(false);
+            }
+        }
+
+        function toggleMeasureMode() {
+            measureMode = !measureMode;
+            if (measureMode) {
+                selectMode = false;
+                document.getElementById('selectionPanel').style.display = '';
+                document.getElementById('measureBtn').classList.add('active');
+                enableClickable(true);
+            } else {
+                document.getElementById('measureBtn').classList.remove('active');
+                enableClickable(false);
+            }
+        }
+
+        function enableClickable(enable) {
+            if (!viewer) return;
+            try {
+                if (enable) {
+                    viewer.setClickable({}, true, atomClickHandler);
+                } else {
+                    viewer.setClickable({}, false);
+                }
+            } catch (e) {
+                // 兼容性：若setClickable不可用，使用hover/canvas事件（简单通知）
+                console.warn('setClickable not supported or failed', e);
+            }
+        }
+
+        function atomClickHandler(atom, viewerInstance, event) {
+            if (!atom) return;
+            const info = atom.resn + ' ' + atom.resi + ' (' + atom.atom + ')';
+            if (measureMode) {
+                // 测距模式：选两个点计算距离并标注
+                selectedAtoms.push({atom});
+                if (selectedAtoms.length === 2) {
+                    const a = selectedAtoms[0].atom;
+                    const b = selectedAtoms[1].atom;
+                    const dx = a.x - b.x, dy = a.y - b.y, dz = a.z - b.z;
+                    const dist = Math.sqrt(dx*dx+dy*dy+dz*dz).toFixed(2);
+                    const mx = (a.x + b.x)/2, my=(a.y+b.y)/2, mz=(a.z+b.z)/2;
+                    // 在两点间画一条线
+                    viewer.addCylinder({
+                        start: {x: a.x, y: a.y, z: a.z},
+                        end: {x: b.x, y: b.y, z: b.z},
+                        radius: 0.1,
+                        color: 'yellow',
+                        fromCap: true,
+                        toCap: true
+                    });
+                    // 标签
+                    viewer.addLabel(dist + ' Å', {
+                        position: {x: mx, y: my, z: mz},
+                        backgroundColor: 'rgba(0,0,0,0.7)',
+                        fontColor: 'white',
+                        fontSize: 14
+                    });
+                    viewer.render();
+                    document.getElementById('selectedList').textContent = a.resn + a.resi + ' — ' + b.resn + b.resi + ' (' + dist + ' Å)';
+                    selectedAtoms = [];
+                } else {
+                    // 标记第一个点
+                    viewer.addSphere({
+                        center: {x: atom.x, y: atom.y, z: atom.z},
+                        radius: 0.5,
+                        color: 'orange'
+                    });
+                    viewer.render();
+                    document.getElementById('selectedList').textContent = info + ' (选择第二个点)';
+                }
+            } else if (selectMode) {
+                // 选择模式：高亮当前残基
+                const sel = {resi: atom.resi, chain: atom.chain};
+                // 清除之前样式并高亮新选择
+                viewer.setStyle({}, {cartoon: {color: 'spectrum'}});
+                viewer.setStyle(sel, {cartoon: {color: 'red'}});
+                viewer.render();
+                document.getElementById('selectedList').textContent = info;
+            }
+        }
+
+        function clearSelections() {
+            selectedAtoms = [];
+            document.getElementById('selectedList').textContent = '（无）';
+            if (viewer) {
+                // 获取当前样式设置
+                const style = document.getElementById('styleSelect').value;
+                const color = document.getElementById('colorSelect').value;
+                applyStyleAndColor(style, color);
+                viewer.removeAllLabels();
+                viewer.removeAllShapes(); // 移除测距线和球
+                viewer.render();
+            }
+        }
+
+        // 截图导出（当前分辨率），并提供2x放大（基于画布插值）
+        function exportPNG(upscale = 1) {
+            const viewerEl = document.getElementById('viewer');
+            if (!viewerEl) return;
+            const canvas = viewerEl.querySelector('canvas');
+            if (!canvas) {
+                alert('截图失败：未找到渲染画布');
+                return;
+            }
+
+            try {
+                const dataURL = canvas.toDataURL('image/png');
+                if (upscale && upscale > 1) {
+                    // 使用离屏画布放大（会插值放大，非真实提高渲染采样）
+                    const off = document.createElement('canvas');
+                    off.width = canvas.width * upscale;
+                    off.height = canvas.height * upscale;
+                    const ctx = off.getContext('2d');
+                    ctx.drawImage(canvas, 0, 0, off.width, off.height);
+                    downloadURI(off.toDataURL('image/png'), '2VVM_screenshot@' + upscale + 'x.png');
+                } else {
+                    downloadURI(dataURL, '2VVM_screenshot.png');
+                }
+            } catch (e) {
+                console.error(e);
+                alert('截图失败：' + e.message);
+            }
+        }
+
+        function downloadURI(uri, name) {
+            const a = document.createElement('a');
+            a.href = uri;
+            a.download = name || '';
+            document.body.appendChild(a);
+            a.click();
+            a.remove();
+        }
+
+        // ========== 新功能：全屏模式 ==========
+        let isFullscreen = false;
+        
+        function toggleFullscreen() {
+            const container = document.getElementById('viewerContainer');
+            isFullscreen = !isFullscreen;
+            
+            if (isFullscreen) {
+                container.classList.add('fullscreen-mode');
+                document.body.style.overflow = 'hidden';
+            } else {
+                container.classList.remove('fullscreen-mode');
+                document.body.style.overflow = '';
+            }
+            
+            // 调整viewer大小
+            if (viewer && typeof viewer.resize === 'function') {
+                setTimeout(() => {
+                    viewer.resize();
+                    viewer.render();
+                }, 100);
+            }
+        }
+
+        // ESC键退出全屏
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape' && isFullscreen) {
+                toggleFullscreen();
+            }
+        });
+
+        // ========== 新功能：序列查看器 ==========
+        let sequenceData = [];
+        const mutationSites = [246, 336, 348, 384, 385];
+        const AA_CODES = {
+            'ALA': 'A', 'ARG': 'R', 'ASN': 'N', 'ASP': 'D', 'CYS': 'C',
+            'GLN': 'Q', 'GLU': 'E', 'GLY': 'G', 'HIS': 'H', 'ILE': 'I',
+            'LEU': 'L', 'LYS': 'K', 'MET': 'M', 'PHE': 'F', 'PRO': 'P',
+            'SER': 'S', 'THR': 'T', 'TRP': 'W', 'TYR': 'Y', 'VAL': 'V',
+            'FAD': '★', 'PRO': 'P', 'EDO': '◆'
+        };
+
+        function generateSequenceViewer(atoms) {
+            const scrollContainer = document.getElementById('sequenceScroll');
+            if (!scrollContainer) return;
+            
+            // 获取链A的唯一残基
+            const residueMap = new Map();
+            atoms.forEach(atom => {
+                if (atom.chain === 'A' && atom.atom === 'CA') {
+                    const key = `${atom.resi}`;
+                    if (!residueMap.has(key)) {
+                        residueMap.set(key, {
+                            resi: atom.resi,
+                            resn: atom.resn,
+                            ss: atom.ss || 'c'
+                        });
+                    }
+                }
+            });
+            
+            // 添加配体
+            atoms.forEach(atom => {
+                if (atom.chain === 'A' && (atom.resn === 'FAD' || atom.resn === 'PRO') && atom.atom === 'C1') {
+                    const key = `lig_${atom.resn}`;
+                    if (!residueMap.has(key)) {
+                        residueMap.set(key, {
+                            resi: atom.resi,
+                            resn: atom.resn,
+                            ss: 'ligand'
+                        });
+                    }
+                }
+            });
+            
+            // 转换为数组并排序
+            sequenceData = Array.from(residueMap.values()).sort((a, b) => a.resi - b.resi);
+            
+            // 生成HTML
+            let html = '';
+            sequenceData.forEach(res => {
+                const code = AA_CODES[res.resn] || res.resn.charAt(0);
+                const isMutation = mutationSites.includes(res.resi);
+                const isLigand = res.resn === 'FAD' || res.resn === 'PRO' || res.resn === 'EDO';
+                
+                let ssClass = 'coil';
+                if (isMutation) ssClass = 'mutation';
+                else if (isLigand) ssClass = 'ligand';
+                else if (res.ss === 'h') ssClass = 'helix';
+                else if (res.ss === 's') ssClass = 'sheet';
+                
+                html += `<div class="seq-residue ${ssClass}" data-resi="${res.resi}" data-resn="${res.resn}" onclick="focusResidue(${res.resi}, '${res.resn}')" title="${res.resn} ${res.resi}">${code}</div>`;
+            });
+            
+            scrollContainer.innerHTML = html;
+            
+            // 监听滚动更新位置指示
+            scrollContainer.addEventListener('scroll', updateSequencePosition);
+            updateSequencePosition();
+        }
+
+        function updateSequencePosition() {
+            const scroll = document.getElementById('sequenceScroll');
+            const posEl = document.getElementById('seqPosition');
+            if (!scroll || !posEl || sequenceData.length === 0) return;
+            
+            const scrollLeft = scroll.scrollLeft;
+            const itemWidth = 21; // 20px + 1px gap
+            const startIdx = Math.floor(scrollLeft / itemWidth);
+            const visibleCount = Math.floor(scroll.clientWidth / itemWidth);
+            
+            const startResi = sequenceData[Math.min(startIdx, sequenceData.length - 1)]?.resi || 1;
+            const endResi = sequenceData[Math.min(startIdx + visibleCount, sequenceData.length - 1)]?.resi || startResi;
+            
+            posEl.textContent = `${startResi}-${endResi}`;
+        }
+
+        function scrollSequence(delta) {
+            const scroll = document.getElementById('sequenceScroll');
+            if (scroll) {
+                scroll.scrollBy({ left: delta, behavior: 'smooth' });
+            }
+        }
+
+        function focusResidue(resi, resn) {
+            if (!viewer) return;
+            
+            // 高亮选中的残基
+            const style = document.getElementById('styleSelect').value;
+            viewer.setStyle({}, {cartoon: {color: 'spectrum'}});
+            
+            if (resn === 'FAD' || resn === 'PRO') {
+                viewer.setStyle({resn: resn}, {stick: {colorscheme: 'yellowCarbon', radius: 0.25}});
+                viewer.zoomTo({resn: resn});
+            } else {
+                viewer.setStyle({resi: resi, chain: 'A'}, {cartoon: {color: 'red'}, stick: {colorscheme: 'redCarbon', radius: 0.2}});
+                viewer.zoomTo({resi: resi, chain: 'A'});
+            }
+            
+            viewer.render();
+            
+            // 更新序列高亮
+            document.querySelectorAll('.seq-residue').forEach(el => el.classList.remove('selected'));
+            const seqEl = document.querySelector(`.seq-residue[data-resi="${resi}"]`);
+            if (seqEl) {
+                seqEl.classList.add('selected');
+                seqEl.scrollIntoView({ behavior: 'smooth', inline: 'center' });
+            }
+            
+            showStatus(`定位到 ${resn} ${resi}`, 'success');
+        }
+
+        // ========== 新功能：残基搜索 ==========
+        let searchIndex = [];
+
+        function buildSearchIndex(atoms) {
+            const residueMap = new Map();
+            
+            atoms.forEach(atom => {
+                const key = `${atom.chain}_${atom.resi}`;
+                if (!residueMap.has(key)) {
+                    residueMap.set(key, {
+                        chain: atom.chain,
+                        resi: atom.resi,
+                        resn: atom.resn
+                    });
+                }
+            });
+            
+            searchIndex = Array.from(residueMap.values());
+            
+            // 绑定搜索事件
+            const searchInput = document.getElementById('residueSearch');
+            if (searchInput) {
+                searchInput.addEventListener('input', handleSearchInput);
+                searchInput.addEventListener('keydown', function(e) {
+                    if (e.key === 'Enter') {
+                        searchResidue();
+                    }
+                });
+            }
+        }
+
+        function handleSearchInput(e) {
+            const query = e.target.value.trim().toUpperCase();
+            const suggestions = document.getElementById('searchSuggestions');
+            
+            if (query.length === 0) {
+                suggestions.classList.remove('show');
+                return;
+            }
+            
+            // 过滤匹配项
+            const matches = searchIndex.filter(item => {
+                return item.resi.toString().includes(query) || 
+                       item.resn.toUpperCase().includes(query);
+            }).slice(0, 10);
+            
+            if (matches.length === 0) {
+                suggestions.classList.remove('show');
+                return;
+            }
+            
+            // 生成建议列表
+            let html = '';
+            matches.forEach(item => {
+                const isMutation = mutationSites.includes(item.resi);
+                html += `<div class="search-suggestion-item" onclick="selectSearchResult('${item.chain}', ${item.resi}, '${item.resn}')">
+                    <span class="res-name">${item.resn} ${item.resi}</span>
+                    <span class="res-info">链 ${item.chain} ${isMutation ? '· 突变位点' : ''}</span>
+                </div>`;
+            });
+            
+            suggestions.innerHTML = html;
+            suggestions.classList.add('show');
+        }
+
+        function selectSearchResult(chain, resi, resn) {
+            document.getElementById('searchSuggestions').classList.remove('show');
+            document.getElementById('residueSearch').value = `${resn} ${resi}`;
+            
+            navigateToResidue(chain, resi, resn);
+        }
+
+        function searchResidue() {
+            const query = document.getElementById('residueSearch').value.trim().toUpperCase();
+            document.getElementById('searchSuggestions').classList.remove('show');
+            
+            if (!query) return;
+            
+            // 尝试解析残基编号
+            const numMatch = query.match(/\d+/);
+            const resi = numMatch ? parseInt(numMatch[0]) : null;
+            
+            // 查找匹配项
+            let match = null;
+            if (resi) {
+                match = searchIndex.find(item => item.resi === resi);
+            }
+            if (!match) {
+                match = searchIndex.find(item => item.resn.toUpperCase() === query);
+            }
+            
+            if (match) {
+                navigateToResidue(match.chain, match.resi, match.resn);
+            } else {
+                showStatus('未找到匹配的残基', 'error');
+            }
+        }
+
+        function navigateToResidue(chain, resi, resn) {
+            if (!viewer) return;
+            
+            viewer.setStyle({}, {cartoon: {color: 'spectrum'}});
+            
+            const sel = {resi: resi, chain: chain};
+            viewer.setStyle(sel, {
+                cartoon: {color: '#ff4444'},
+                stick: {colorscheme: 'redCarbon', radius: 0.2}
+            });
+            
+            // 添加标签
+            viewer.removeAllLabels();
+            viewer.addLabel(`${resn} ${resi}`, {
+                position: sel,
+                backgroundColor: 'rgba(255,68,68,0.85)',
+                fontColor: 'white',
+                fontSize: 12
+            }, sel);
+            
+            viewer.zoomTo(sel);
+            viewer.render();
+            
+            // 高亮序列
+            document.querySelectorAll('.seq-residue').forEach(el => el.classList.remove('selected'));
+            const seqEl = document.querySelector(`.seq-residue[data-resi="${resi}"]`);
+            if (seqEl) {
+                seqEl.classList.add('selected');
+                seqEl.scrollIntoView({ behavior: 'smooth', inline: 'center' });
+            }
+            
+            showStatus(`已定位到 ${resn} ${resi} (链 ${chain})`, 'success');
+        }
+
+        // 点击其他地方关闭搜索建议
+        document.addEventListener('click', function(e) {
+            if (!e.target.closest('.search-container')) {
+                document.getElementById('searchSuggestions')?.classList.remove('show');
+            }
+        });
+
+        // ========== 新功能：触摸手势 ==========
+        let touchStartDistance = 0;
+        let lastTouchTime = 0;
+
+        function initTouchGestures() {
+            const viewerEl = document.getElementById('viewer');
+            if (!viewerEl) return;
+            
+            // 检测是否为触摸设备
+            const isTouchDevice = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
+            
+            if (isTouchDevice) {
+                // 显示触摸提示
+                const hint = document.getElementById('touchHint');
+                if (hint) {
+                    hint.classList.add('show');
+                    setTimeout(() => hint.classList.remove('show'), 3000);
+                }
+                
+                viewerEl.addEventListener('touchstart', handleTouchStart, { passive: false });
+                viewerEl.addEventListener('touchmove', handleTouchMove, { passive: false });
+                viewerEl.addEventListener('touchend', handleTouchEnd, { passive: false });
+            }
+        }
+
+        function handleTouchStart(e) {
+            if (e.touches.length === 2) {
+                // 双指缩放开始
+                const dx = e.touches[0].clientX - e.touches[1].clientX;
+                const dy = e.touches[0].clientY - e.touches[1].clientY;
+                touchStartDistance = Math.sqrt(dx * dx + dy * dy);
+            }
+            
+            // 检测双击
+            const now = Date.now();
+            if (now - lastTouchTime < 300 && e.touches.length === 1) {
+                // 双击重置视图
+                resetView();
+                showStatus('视图已重置', 'success');
+            }
+            lastTouchTime = now;
+        }
+
+        function handleTouchMove(e) {
+            if (e.touches.length === 2 && viewer) {
+                e.preventDefault();
+                
+                const dx = e.touches[0].clientX - e.touches[1].clientX;
+                const dy = e.touches[0].clientY - e.touches[1].clientY;
+                const distance = Math.sqrt(dx * dx + dy * dy);
+                
+                if (touchStartDistance > 0) {
+                    const scale = distance / touchStartDistance;
+                    // 3Dmol的缩放通过viewer.zoom实现
+                    if (scale > 1.02) {
+                        viewer.zoom(1.05);
+                        touchStartDistance = distance;
+                    } else if (scale < 0.98) {
+                        viewer.zoom(0.95);
+                        touchStartDistance = distance;
+                    }
+                    viewer.render();
+                }
+            }
+        }
+
+        function handleTouchEnd(e) {
+            touchStartDistance = 0;
+        }
+
+        // 页面加载完成后初始化
+        window.onload = function() {
+            // 先恢复主题选择
+            try {
+                const saved = localStorage.getItem('pv-theme');
+                if (saved) {
+                    isDark = (saved === 'dark');
+                    document.body.setAttribute('data-theme', isDark ? 'dark' : 'light');
+                }
+                
+                // 更新主题图标
+                const themeBtn = document.getElementById('themeBtn');
+                if (themeBtn) {
+                    const sunIcon = themeBtn.querySelector('.sun-icon');
+                    const moonIcon = themeBtn.querySelector('.moon-icon');
+                    if (sunIcon && moonIcon) {
+                        sunIcon.style.display = isDark ? 'none' : 'block';
+                        moonIcon.style.display = isDark ? 'block' : 'none';
+                    }
+                }
+            } catch(e){}
+
+            // 绑定事件监听器
+            bindEventListeners();
+            
+            // 初始化触摸手势
+            initTouchGestures();
+            
+            // 初始化viewer
+            initViewer();
+        };
+    </script>
+</body>
+</html>
